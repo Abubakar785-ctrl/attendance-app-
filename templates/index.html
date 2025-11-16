@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Attendance</title>
+    <style>
+        body { background: #f8f8f8; font-family: Arial, sans-serif; text-align: center; padding: 30px; }
+        .container { background: white; display: inline-block; padding: 30px 40px; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); min-width: 400px; }
+        form { margin: 20px 0; }
+        input, select, button { padding: 10px; margin: 8px; width: 250px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
+        button { background-color: #007bff; color: white; cursor: pointer; border: none; font-weight: bold; width: 270px; }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        a { display: block; margin-top: 20px; color: #007bff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .code-display { background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 15px; margin: 15px 0; font-weight: bold; display: none; }
+        .code-display.show { display: block; }
+        .error { color: #d32f2f; margin: 10px 0; font-weight: bold; }
+        .section { margin-bottom: 30px; display: none; }
+        .section.active { display: block; }
+        h3 { color: #333; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Employee Attendance System</h1>
+        
+        <!-- Step 1: Request Code -->
+        <div class="section active" id="step1">
+            <h3>Step 1: Request Verification Code</h3>
+            <form id="requestCodeForm">
+                <label for="personSelect">Select Your Name (Optional):</label><br>
+                <select id="personSelect" name="personSelect" onchange="updateEmailFromSelect()">
+                    <option value="">--Auto-detect or select--</option>
+                </select><br>
+
+                <label for="email">Your Email:</label><br>
+                <input type="email" id="email" name="email" readonly style="background-color: #e9ecef; cursor: not-allowed;"><br>
+
+                <label for="action">Choose Action:</label><br>
+                <select id="action" name="action" required>
+                    <option value="">--Select--</option>
+                    <option value="sign_in">Sign In</option>
+                    <option value="sign_out">Sign Out</option>
+                </select><br>
+
+                <button type="button" onclick="requestCode()">Request Code</button>
+            </form>
+            <div id="error1" class="error"></div>
+        </div>
+
+        <!-- Step 2: Enter Code -->
+        <div class="section" id="step2">
+            <h3>Step 2: Enter Verification Code</h3>
+            
+            <div class="code-display" id="codeDisplay">
+                Your Verification Code: <span id="displayCode" style="font-size: 24px; color: #d32f2f;">----</span>
+                <br><small>(Code expires in 5 minutes)</small>
+            </div>
+
+            <form id="verifyForm">
+                <label for="code">Enter 5-Digit Code:</label><br>
+                <input type="text" id="code" name="code" maxlength="5" placeholder="00000" required pattern="[0-9]{5}"><br>
+
+                <button type="button" onclick="verifyAndSubmit()">Confirm & Submit</button>
+                <button type="button" onclick="backToStep1()" style="background-color: #6c757d;">Back</button>
+            </form>
+            <div id="error2" class="error"></div>
+        </div>
+
+        <a href="{{ url_for('admin_login') }}">Admin Login</a>
+    </div>
+
+    <script>
+        let currentAction = "";
+        let currentEmail = "";
+        let lockedEmail = "";
+
+        // Inject employee emails from Flask safely
+        const EMPLOYEE_EMAILS = {{ employee_emails|default({})|tojson }};
+
+        // Populate person select dynamically
+        function populatePersonSelect() {
+            const select = document.getElementById("personSelect");
+            Object.keys(EMPLOYEE_EMAILS).forEach(name => {
+                const opt = document.createElement("option");
+                opt.value = name;
+                opt.textContent = name;
+                select.appendChild(opt);
+            });
+        }
+
+        function updateEmailFromSelect() {
+            const select = document.getElementById("personSelect");
+            const name = select.value;
+            if (name && EMPLOYEE_EMAILS[name]) {
+                document.getElementById("email").value = EMPLOYEE_EMAILS[name];
+                currentEmail = EMPLOYEE_EMAILS[name];
+            } else if (lockedEmail) {
+                document.getElementById("email").value = lockedEmail;
+                currentEmail = lockedEmail;
+            } else {
+                document.getElementById("email").value = "";
+                currentEmail = "";
+            }
+        }
+
+        window.addEventListener('load', function() {
+            populatePersonSelect();
+
+            fetch("/get-system-email")
+                .then(res => res.json())
+                .then(data => {
+                    if (data.email) {
+                        lockedEmail = data.email;
+                        document.getElementById("email").value = data.email;
+                        currentEmail = data.email;
+                    }
+                    if (data.multiple && data.users) {
+                        const select = document.getElementById("personSelect");
+                        data.users.forEach(user => {
+                            const opt = document.createElement("option");
+                            opt.value = user;
+                            opt.textContent = user;
+                            select.appendChild(opt);
+                        });
+                    }
+                })
+                .catch(err => console.error("Error fetching system email:", err));
+        });
+
+        function requestCode() {
+            const email = currentEmail;
+            const action = document.getElementById("action").value;
+            const error1 = document.getElementById("error1");
+            error1.textContent = "";
+
+            if (!email || !action) {
+                error1.textContent = "Please fill all fields";
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("email", email);
+            formData.append("action", action);
+            formData.append("selected_name", document.getElementById("personSelect").value || "");
+
+            fetch("/request-code", { method: "POST", body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        currentAction = action;
+                        document.getElementById("step1").classList.remove("active");
+                        document.getElementById("step2").classList.add("active");
+                        document.getElementById("codeDisplay").classList.add("show");
+                    } else {
+                        error1.textContent = data.message || "Error requesting code";
+                    }
+                })
+                .catch(err => error1.textContent = "Error: " + err);
+        }
+
+        function verifyAndSubmit() {
+            const code = document.getElementById("code").value;
+            const error2 = document.getElementById("error2");
+            error2.textContent = "";
+
+            if (!code || code.length !== 5) {
+                error2.textContent = "Please enter a valid 5-digit code";
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("email", currentEmail);
+            formData.append("code", code);
+            formData.append("action", currentAction);
+            formData.append("selected_name", document.getElementById("personSelect").value || "");
+
+            fetch("/verify-and-submit", { method: "POST", body: formData })
+                .then(res => {
+                    if (res.status === 200 && res.url) {
+                        window.location.href = res.url;
+                    } else {
+                        return res.text().then(text => { error2.textContent = text; });
+                    }
+                })
+                .catch(err => error2.textContent = "Error: " + err);
+        }
+
+        function backToStep1() {
+            document.getElementById("step2").classList.remove("active");
+            document.getElementById("step1").classList.add("active");
+            document.getElementById("action").value = "";
+            document.getElementById("code").value = "";
+            document.getElementById("error1").textContent = "";
+            document.getElementById("error2").textContent = "";
+            document.getElementById("codeDisplay").classList.remove("show");
+        }
+    </script>
+</body>
+</html>

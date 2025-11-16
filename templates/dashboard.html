@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f7f7f7;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            max-width: 1000px;
+            margin: auto;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            padding: 8px;
+            border: 1px solid #ccc;
+            text-align: left;
+        }
+        th {
+            background: #eee;
+        }
+        .late {
+            background-color: #ffdddd;
+        }
+        a {
+            float: right;
+            margin-top: -40px;
+            text-decoration: none;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Attendance Dashboard</h1>
+    <p><strong>Office Time:</strong> {{ office_time }}</p>
+    <a href="{{ url_for('logout') }}">Logout</a>
+
+    <h2>Attendance Overview — {{ today }}</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Category</th>
+                <th>Employees</th>
+                <th>Count</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>All Employees</strong></td>
+                <td>{{ all_employees | join(', ') }}</td>
+                <td>{{ all_employees|length }}</td>
+            </tr>
+            <tr class="late">
+                <td><strong>Late</strong></td>
+                <td>{% if late %}{{ late|join(', ') }}{% else %}None{% endif %}</td>
+                <td>{{ late|length }}</td>
+            </tr>
+            <tr>
+                <td><strong>Signed In</strong></td>
+                <td>{% if signed_in %}{{ signed_in|join(', ') }}{% else %}None{% endif %}</td>
+                <td>{{ signed_in|length }}</td>
+            </tr>
+            <tr>
+                <td><strong>Signed Out</strong></td>
+                <td>{% if signed_out %}{{ signed_out|join(', ') }}{% else %}None{% endif %}</td>
+                <td>{{ signed_out|length }}</td>
+            </tr>
+            <tr>
+                <td><strong>Absent</strong></td>
+                <td>{% if absent %}{{ absent|join(', ') }}{% else %}None{% endif %}</td>
+                <td>{{ absent|length }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Detailed Attendance Records</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Date</th>
+                <th>Sign In</th>
+                <th>Sign Out</th>
+                <th>Status</th>
+                <th>Late By</th>
+                <th>Worked Hours</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for record in records %}
+            <tr class="{% if record[5] != '-' and record[5] %}late{% endif %}">
+                <td>{{ record[0] }}</td>
+                <td>{{ record[1] }}</td>
+                <td>{{ record[2] if record[2] else '-' }}</td>
+                <td>{{ record[3] if record[3] else '-' }}</td>
+                <td>{{ record[4] if record[4] else '-' }}</td>
+                <td>{{ record[5] if record[5] else '-' }}</td>
+                <td>{{ record[6] if record[6] else '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

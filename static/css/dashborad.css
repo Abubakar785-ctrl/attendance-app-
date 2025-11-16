@@ -1,0 +1,137 @@
+/* ======== GLOBAL RESET ======== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Inter", "Segoe UI", sans-serif;
+}
+
+/* ======== PAGE BACKGROUND ======== */
+body {
+  background: #f3f4f6;
+  color: #1e1e1e;
+  padding: 2rem;
+}
+
+/* ======== DASHBOARD CONTAINER ======== */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+  padding: 2rem;
+}
+
+/* ======== HEADER ======== */
+h1 {
+  text-align: center;
+  font-size: 1.8rem;
+  color: #1f2937;
+  margin-bottom: 1rem;
+  font-weight: 700;
+}
+
+h2, h3 {
+  margin-top: 2rem;
+  color: #111827;
+  text-align: center;
+}
+
+.logout {
+  text-align: right;
+  margin-bottom: 1rem;
+}
+
+.logout a {
+  text-decoration: none;
+  color: #ef4444;
+  font-weight: 600;
+  transition: 0.2s;
+}
+
+.logout a:hover {
+  color: #b91c1c;
+}
+
+/* ======== TABLE STYLING ======== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+th, td {
+  border: 1px solid #e5e7eb;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+th {
+  background: #f9fafb;
+  color: #111827;
+  font-weight: 600;
+}
+
+tr:nth-child(even) {
+  background: #f3f4f6;
+}
+
+tr:hover {
+  background: #e5e7eb;
+}
+
+/* ======== CATEGORY STYLING ======== */
+.category {
+  font-weight: 600;
+  background-color: #f9fafb;
+}
+
+.count {
+  text-align: center;
+  font-weight: 600;
+}
+
+/* ======== HIGHLIGHT COLORS ======== */
+td.late {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+td.present {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+td.absent {
+  background-color: #fef9c3;
+  color: #92400e;
+}
+
+/* ======== RESPONSIVE ======== */
+@media (max-width: 768px) {
+  body {
+    padding: 1rem;
+  }
+
+  .container {
+    padding: 1rem;
+  }
+
+  table, th, td {
+    font-size: 0.8rem;
+  }
+
+  h1 {
+    font-size: 1.4rem;
+  }
+}
+
+/* ======== FOOTER ======== */
+.footer {
+  margin-top: 2rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
