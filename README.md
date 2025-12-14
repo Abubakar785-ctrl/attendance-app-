@@ -35,7 +35,7 @@ This entire system was built by hand without AI code generation. Every feature -
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/TerminalProdigy/attendance-system.git
+git clone https://github.com/TextModeKid/attendance-system.git
 cd attendance-system
 ```
 
