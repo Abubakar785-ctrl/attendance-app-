@@ -1,3 +1,4 @@
+#########imports########
 from flask import Flask, render_template, request, redirect, url_for, session
 import sqlite3
 from datetime import datetime
@@ -9,9 +10,14 @@ import random
 import string
 import socket
 import getpass
+import smtplib
+from email.message import EmailMessage
+# For CSV report generation
 import csv
 from io import StringIO
 from flask import Response
+#########imports########
+
 
 load_dotenv()
 
@@ -51,27 +57,52 @@ def generate_verification_code():
     """Generate a random 5-digit code."""
     return ''.join(random.choices(string.digits, k=5))
 
+
+
+
 def send_verification_code(employee_name, code, action, email_override=None):
-    """Send verification code to employee email. In production, use email service.
-    If `email_override` is provided, send to that address instead of the one in EMPLOYEE_EMAILS.
-    """
+    """Send verification code to employee email using SMTP."""
     email = email_override or EMPLOYEE_EMAILS.get(employee_name)
-    if email:
-        # TODO: Integrate with email service (e.g., SendGrid, AWS SES)
-        # For now, just print to console for testing
-        print(f"[EMAIL] To: {email} | Subject: {action.upper()} Verification Code | Body: Your code is: {code}")
+    if not email:
+        return False
+
+    # Create email
+    msg = EmailMessage()
+    msg["Subject"] = f"{action.upper()} Verification Code"
+    msg["From"] = os.getenv("EMAIL_USER")
+    msg["To"] = email
+    msg.set_content(f"Hello {employee_name},\n\nYour {action} verification code is: {code}\n\nThank you.")
+
+    try:
+        with smtplib.SMTP(os.getenv("EMAIL_HOST"), int(os.getenv("EMAIL_PORT"))) as server:
+            server.starttls()  # secure the connection
+            server.login(os.getenv("EMAIL_USER"), os.getenv("EMAIL_PASS"))
+            server.send_message(msg)
+        print(f"[EMAIL] Sent to {email}")
         return True
-    return False
+    except Exception as e:
+        print(f"[ERROR] Failed to send email to {email}: {e}")
+        return False
+
+
+# admin ony these are allowed ot get in to the admin dashboard
+admin_emplyees = ["nauman", "saleem", "zanrbs", "abubakar"]
+# now create a function to only allowed admin to go to the admin dashboard
+
+def is_admin(employee_name):
+    return employee_name in admin_emplyees
+
+# List of employees - update these with actual employee names
 
 EMPLOYEES = [
-    "Employee 1", "Employee 2", "Employee 3", "Employee 4",
+    "nauman", "Employee 2", "Employee 3", "Employee 4",
     "Employee 5", "Employee 6", "Employee 7", "Employee 8",
-    "Employee 9", "Employee 10", "Employee 11", "Employee 12", "Employee 13"
+    "Employee 9", "Employee 10", "Employee 11", "Employee 12", "Employee 13", "abubakar"
 ]
 
 # Employee emails - update these with actual emails
 EMPLOYEE_EMAILS = {
-    "Employee 1": "employee1@example.com",
+    "nauman": "naumantariq482@gmail.com",
     "Employee 2": "employee2@example.com",
     "Employee 3": "employee3@example.com",
     "Employee 4": "employee4@example.com",
@@ -81,9 +112,7 @@ EMPLOYEE_EMAILS = {
     "Employee 8": "employee8@example.com",
     "Employee 9": "employee9@example.com",
     "Employee 10": "employee10@example.com",
-    "Employee 11": "employee11@example.com",
-    "Employee 12": "employee12@example.com",
-    "Employee 13": "employee13@example.com"
+    "Emplsoyee 11": "employee11@example.com",
 }
 
 # Map Windows usernames to employee names and their emails
@@ -106,11 +135,70 @@ VERIFICATION_CODES = {}
 
 ADMIN_CREDENTIALS = {
     "username": os.getenv("ADMIN_USERNAME", "admin"),
-    "password": os.getenv("ADMIN_PASSWORD", "billing@787")
+    "password": os.getenv("ADMIN_PASSWORD", "admin@123")
 }
 
 # --- DATABASE SETUP ---
 BASE_DB_FOLDER = Path("db")
+
+
+# make a function to download the monthly report of all employees attendance in csv format
+def download_monthly_report(year, month):
+    """Download monthly attendance report as CSV."""
+    # Prepare CSV in memory
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Name", "Date", "Sign In", "Sign Out", "Status", "Late By", "Worked Hours"])
+
+    # Iterate through all week folders of the month
+    for week_folder in BASE_DB_FOLDER.glob("week_*"):
+        for db_file in week_folder.glob("attendance_*.db"):
+            db_date_str = db_file.stem.split("_")[1]
+            db_date = datetime.strptime(db_date_str, "%Y-%m-%d")
+            if db_date.year == year and db_date.month == month:
+                conn = sqlite3.connect(db_file)
+                c = conn.cursor()
+                c.execute("SELECT name, date, sign_in, sign_out, status, late_by, worked_hours FROM attendance")
+                rows = c.fetchall()
+                for row in rows:
+                    writer.writerow(row)
+                conn.close()
+
+    output.seek(0)
+    return Response(output, mimetype="text/csv",
+                    headers={"Content-Disposition": f"attachment;filename=attendance_report_{year}_{month}.csv"})
+
+
+def get_weekly_attendance_csv():
+    """Get current week's attendance report as CSV."""
+    # Prepare CSV in memory
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Name", "Date", "Sign In", "Sign Out", "Status", "Late By", "Worked Hours"])
+
+    # Get current week folder
+    week_folder = get_week_folder()
+    
+    # Iterate through all database files in current week folder
+    for db_file in sorted(week_folder.glob("attendance_*.db")):
+        conn = sqlite3.connect(db_file)
+        c = conn.cursor()
+        c.execute("SELECT name, date, sign_in, sign_out, status, late_by, worked_hours FROM attendance ORDER BY name")
+        rows = c.fetchall()
+        for row in rows:
+            writer.writerow(row)
+        conn.close()
+
+    output.seek(0)
+    
+    # Generate filename with current week info
+    now = datetime.now(TIMEZONE)
+    year, week, _ = now.isocalendar()
+    filename = f"attendance_week_{year}_w{week}.csv"
+    
+    return Response(output, mimetype="text/csv",
+                    headers={"Content-Disposition": f"attachment;filename={filename}"})
+
 
 def get_week_folder():
     """Return the current week folder path (e.g. db/week_2025_45)."""
@@ -201,6 +289,8 @@ def get_system_email():
     except Exception as e:
         print(f"[DEBUG] Error: {str(e)}")
         return {"error": str(e)}, 400
+
+
 
 
 @app.route("/request-code", methods=["POST"])
@@ -380,7 +470,22 @@ def logout():
     return redirect(url_for("admin_login"))
 
 
+@app.route("/download-weekly-report")
+def download_weekly_report():
+    """Download current week's attendance as CSV."""
+    if "admin" not in session:
+        return redirect(url_for("admin_login"))
+    return get_weekly_attendance_csv()
+
+
+@app.route("/download-monthly-report/<int:year>/<int:month>")
+def download_monthly_report_route(year, month):
+    """Download monthly attendance report as CSV."""
+    if "admin" not in session:
+        return redirect(url_for("admin_login"))
+    return download_monthly_report(year, month)
+
 # --- MAIN ENTRY POINT ---
 if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0",port=5000)
 
-    app.run(debug=True, host="0.0.0.0")
