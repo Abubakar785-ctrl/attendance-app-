@@ -95,14 +95,13 @@ def is_admin(employee_name):
 # List of employees - update these with actual employee names
 
 EMPLOYEES = [
-    "nauman", "Employee 2", "Employee 3", "Employee 4",
+    "Employee 2", "Employee 3", "Employee 4",
     "Employee 5", "Employee 6", "Employee 7", "Employee 8",
-    "Employee 9", "Employee 10", "Employee 11", "Employee 12", "Employee 13", "abubakar"
+    "Employee 9", "Employee 10", "Employee 11", "Employee 12", "Employee 13"
 ]
 
 # Employee emails - update these with actual emails
 EMPLOYEE_EMAILS = {
-    "nauman": "naumantariq482@gmail.com",
     "Employee 2": "employee2@example.com",
     "Employee 3": "employee3@example.com",
     "Employee 4": "employee4@example.com",
@@ -488,4 +487,5 @@ def download_monthly_report_route(year, month):
 # --- MAIN ENTRY POINT ---
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0",port=5000)
+
 
